@@ -7,3 +7,4 @@ dist/
 coverage/
 .local/
 project.private.config.json
+.workbuddy/
