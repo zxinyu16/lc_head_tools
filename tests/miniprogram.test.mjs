@@ -38,3 +38,23 @@ test('生成的 Word 包含三项标准结构且转义特殊字符',()=>{
  assert.ok(data.includes(Buffer.from('A &amp; &lt;B&gt;')));
  assert.ok(data.includes(Buffer.from('001')));
 });
+test('Word 包内各文件 CRC 与目录一致且 document.xml 结构完整',()=>{
+ const docx=loadModule('../miniprogram/lib/docx.js');
+ const data=Buffer.from(docx.generate({documentType:'packingList',fields:{seller:'出口公司\n地址第一行',buyer:'BUYER',invoiceNumber:'',invoiceDate:'2026-09-26',lcNumber:'LC-9'},printedClauses:[{name:'PI',value:'PI-1'}],checklist:[{name:'签字',value:'发票需签字'}]}));
+ const table=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;table[n]=c;}
+ const crc32=bytes=>{let crc=0xffffffff;for(const b of bytes)crc=table[(crc^b)&255]^(crc>>>8);return (crc^0xffffffff)>>>0;};
+ const entries=[];let offset=0;
+ while(data.readUInt32LE(offset)===0x04034b50){
+  const crc=data.readUInt32LE(offset+14),size=data.readUInt32LE(offset+18),nameLen=data.readUInt16LE(offset+26),extraLen=data.readUInt16LE(offset+28);
+  const name=data.subarray(offset+30,offset+30+nameLen).toString();
+  const body=data.subarray(offset+30+nameLen+extraLen,offset+30+nameLen+extraLen+size);
+  entries.push({name,crc,body});offset+=30+nameLen+extraLen+size;
+ }
+ assert.deepEqual(entries.map(e=>e.name),['[Content_Types].xml','_rels/.rels','word/document.xml']);
+ for(const e of entries)assert.equal(crc32(e.body),e.crc,e.name);
+ const documentXml=entries[2].body.toString();
+ assert.ok(documentXml.startsWith('<?xml'));
+ assert.ok(documentXml.trimEnd().endsWith('</w:document>'));
+ assert.ok(documentXml.includes('PACKING LIST'));
+ assert.ok(documentXml.includes('<w:br/>'));
+});
