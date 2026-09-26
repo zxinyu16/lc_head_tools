@@ -9,10 +9,10 @@
 ## 环境与命令
 
 - Node.js（无第三方依赖，`"type": "module"`）。
-- `npm test` — 全部自动测试（当前 30 项，必须全绿才能提交）。
+- `npm test` — 全部自动测试（当前 31 项，必须全绿才能提交）。
 - `npm run check` — 关键文件语法检查。
 - `npm run sync:miniprogram` — 修改 `src/domain/documents.mjs` 后必须执行，重新生成 `miniprogram/lib/domain.js`（不要直接手改生成物）。
-- 微信开发者工具导入仓库根目录即可编译；`project.config.json` 的 `appid` 为 `touristappid`（本地调试），游客模式下 `webapi_getwxaasyncsecinfo:fail` 报错是基础库限制，不代表业务代码失败。
+- 微信开发者工具导入仓库根目录即可编译；`project.config.json` 已配置用户提供的正式 AppID `wx95fc344fe5970613`。此前游客模式下的 `webapi_getwxaasyncsecinfo:fail` 报错是基础库限制，不代表业务代码失败。
 
 ## 代码布局
 
@@ -33,7 +33,7 @@
 ## 硬性约束（违反即为事故）
 
 1. **不创建云环境、不接 CloudBase**（用户明确暂缓）；不上传体验版、不发布。
-2. **没有正式 AppID**，不要替换 `touristappid`，不要尝试真机预览上传。
+2. **已有用户提供的正式 AppID**；真机预览需使用小程序管理员或已添加为开发成员的微信号。未经用户另行授权，不上传体验版或发布。
 3. `.local/` 是真实客户业务样本，已被 gitignore：**只读本机验证用，禁止提交、上传、在回复或日志中引用具体客户资料**。不要把样本内容写进测试或文档。
 4. `scripts/ocr-pdf.py` 是桌面工具，**不要把它描述或实现成小程序能力**；小程序端 OCR 目前明确不做（见 ocr-feasibility.md）。
 5. 识别/解析结果一律走"候选 → 人工核对"，不静默写入已确认字段；不虚构编号值。
@@ -46,14 +46,14 @@
 - 测试用 `vm.runInNewContext` 沙箱加载模块；跨 realm 对象用 `assert.deepEqual` 会因原型不同失败，比较前先 `JSON.parse(JSON.stringify(actual))` 归一化。
 - 测试中的 wx API 用内存 mock（见 `tests/workflow.test.mjs` 的 `createEnv()`），新增页面交互时同步扩展 mock。
 
-## 当前状态（2026-09-26，提交 7a5ce66）
+## 当前状态（2026-09-26）
 
-- 30 项测试全通过；功能见 README「当前可用」。
-- 最近新增：本机 JSON 备份/恢复、损坏数据保留、重复文件导入拦截、端到端测试扩展。
+- 31 项测试全通过；功能见 README「当前可用」。
+- 最近新增：本机 JSON 备份/恢复、损坏数据保留、重复文件导入拦截；首页“手动填写 / 导入信用证文本”双入口，支持 `.txt` 文件读入候选。
 
 ## 下一步优先级
 
-1. 等用户提供正式 AppID → 真机人工验收（表单、文件导入、Word 打开、备份恢复）。
+1. 使用已提供的正式 AppID → 在开发者工具和真机人工验收（表单、文件导入、Word 打开、备份恢复）。
 2. 用户恢复 CloudBase 后 → 按 `specs/manual-workflow/ocr-feasibility.md` 做"上传 → 云函数 OCR → 候选 → 人工核对"，先确认数据出端合规。
 3. 有脱敏正式单据模板后 → 字段映射与正式版式（PRD 阶段 A/E）。
 

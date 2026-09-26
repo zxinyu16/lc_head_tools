@@ -128,6 +128,26 @@ test('重复、超限或类型不符的文件不会重复进入业务', () => {
   assert.match(env.toasts.at(-1), /20 MB 内的 PDF 或图片/);
 });
 
+test('两种入口分别进入手填和信用证文本，文本文件只形成待核对候选', () => {
+  const { env, store, pages } = createEnv();
+  const home = pages.home();
+  home.createManual();
+  assert.equal(env.navigated.at(-1), '/pages/editor/index?step=1');
+  home.createFromLc();
+  assert.equal(env.navigated.at(-1), '/pages/editor/index?step=0');
+  const editor = pages.editor();
+  editor.onLoad({ step: '0' }); editor.onShow();
+  const text = ':20:LC-TXT-001\n:46A:PROFORMA INVOICE NO. PI-TXT-1';
+  env.chosenFile = { path: '/tmp/credit.txt', size: text.length, name: 'credit.txt' };
+  env.readFiles.set('/tmp/credit.txt', text);
+  editor.importLcText();
+  assert.equal(editor.data.lcInput, text);
+  assert.equal(editor.data.lcTextName, 'credit.txt');
+  editor.parseLc();
+  assert.equal(editor.data.lcCandidates.fields[0].value, 'LC-TXT-001');
+  assert.equal(store.active().fields.lcNumber, '');
+});
+
 test('本地保存失败时页面保留当前输入并提示失败', () => {
   const { env, store, pages } = createEnv();
   pages.home().create();

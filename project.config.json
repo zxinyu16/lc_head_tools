@@ -2,7 +2,7 @@
   "description": "信用证辅助制单，本地开发版",
   "miniprogramRoot": "miniprogram/",
   "compileType": "miniprogram",
-  "appid": "touristappid",
+  "appid": "wx95fc344fe5970613",
   "projectname": "lc-document-studio",
   "setting": {
     "es6": true,
