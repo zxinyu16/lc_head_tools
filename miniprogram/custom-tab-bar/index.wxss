@@ -1,0 +1,1 @@
+.bar{display:flex;background:#fff;border-top:1rpx solid #dedfd7;padding-bottom:env(safe-area-inset-bottom);position:fixed;bottom:0;left:0;right:0;z-index:100}.item{flex:1;text-align:center;line-height:100rpx;color:#737c75;font-size:26rpx}.active{color:#176b52;font-weight:600;border-top:4rpx solid #176b52}

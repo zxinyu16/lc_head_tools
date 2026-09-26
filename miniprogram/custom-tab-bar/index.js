@@ -1,0 +1,1 @@
+Component({data:{selected:0,list:[{url:'/pages/home/index',text:'业务'},{url:'/pages/templates/index',text:'模板'},{url:'/pages/preview/index',text:'预览'}]},methods:{switchTab(e){wx.switchTab({url:this.data.list[e.currentTarget.dataset.index].url});}}});

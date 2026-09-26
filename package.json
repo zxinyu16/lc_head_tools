@@ -1,0 +1,12 @@
+{
+  "name": "lc-document-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "信用证辅助制单工具",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check src/domain/documents.mjs && node --check miniprogram/pages/home/index.js && node --check miniprogram/pages/editor/index.js && node --check miniprogram/pages/templates/index.js && node --check miniprogram/pages/preview/index.js && node --check miniprogram/lib/docx.js && node --check miniprogram/lib/store.js",
+    "sync:miniprogram": "node scripts/sync-domain.mjs"
+  }
+}
