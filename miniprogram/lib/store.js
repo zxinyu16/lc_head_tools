@@ -17,7 +17,8 @@ function archive(id){change(s=>{const b=s.businesses.find(x=>x.id===id);if(!b)th
 function saveTemplate(template){change(s=>{if(s.templates.some(t=>t.name===template.name))throw new Error('已有同名模板，请使用其他名称');s.templates.unshift(template);});}
 function removeTemplate(id){change(s=>{s.templates=s.templates.filter(t=>t.id!==id);});}
 function recordGeneration(snapshot,path){change(s=>{s.generations.unshift({snapshot,path});});}
+function recordGenerations(records){change(s=>{s.generations.unshift(...records.map(clone));});}
 function exportData(){const s=read();return {kind:'lc-studio-backup',schema:1,exportedAt:new Date().toISOString(),activeId:s.activeId,businesses:s.businesses,templates:s.templates,generations:s.generations};}
 function inspectBackup(payload){if(!payload||payload.kind!=='lc-studio-backup')throw new Error('不是本工具生成的备份文件');const next={schema:1,activeId:typeof payload.activeId==='string'?payload.activeId:'',businesses:payload.businesses,templates:payload.templates,generations:payload.generations};if(!validShape(next)||next.businesses.some(b=>!validBusiness(b)))throw new Error('备份文件内容不完整或版本不兼容');if(new Set(next.businesses.map(b=>b.id)).size!==next.businesses.length)throw new Error('备份中存在重复业务编号');return {next,summary:{businesses:next.businesses.length,templates:next.templates.length,generations:next.generations.length}};}
 function importData(payload){const {next,summary}=inspectBackup(payload);if(next.activeId&&!next.businesses.some(b=>b.id===next.activeId))next.activeId=next.businesses.length?next.businesses[0].id:'';write(next);return summary;}
-module.exports={read,active,select,create,update,duplicate,archive,saveTemplate,removeTemplate,recordGeneration,exportData,inspectBackup,importData};
+module.exports={read,active,select,create,update,duplicate,archive,saveTemplate,removeTemplate,recordGeneration,recordGenerations,exportData,inspectBackup,importData};

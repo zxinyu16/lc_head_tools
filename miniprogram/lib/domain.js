@@ -13,6 +13,7 @@ function createBusiness(name = '') {
   return {
     id: randomUUID(), name, revision: 1, updatedAt: timestamp(),
     fields: { lcNumber: '', seller: '', buyer: '', invoiceNumber: '', invoiceDate: '' },
+    fieldScopes: { lcNumber: [...DOCUMENT_TYPES], seller: [...DOCUMENT_TYPES], buyer: [...DOCUMENT_TYPES], invoiceNumber: [...DOCUMENT_TYPES], invoiceDate: [...DOCUMENT_TYPES] },
     confirmedFields: [], clauses: [], sourceFiles: [], selectedDocuments: ['invoice'],
   };
 }
@@ -26,6 +27,21 @@ function updateField(business, key, value) {
     confirmedFields: business.confirmedFields.filter(field => field !== key),
     revision: business.revision + 1, updatedAt: timestamp(),
   };
+}
+
+function scopeForField(business, key) {
+  const scope = business.fieldScopes?.[key];
+  return Array.isArray(scope) ? scope : DOCUMENT_TYPES;
+}
+
+function updateFieldScope(business, key, scope) {
+  if (!Object.hasOwn(business.fields, key)) throw new Error(`未知字段：${key}`);
+  if (!Array.isArray(scope) || scope.some(doc => !DOCUMENT_TYPES.includes(doc))) throw new Error('未知适用单据');
+  const next = copy(business);
+  next.fieldScopes = { ...next.fieldScopes, [key]: [...new Set(scope)] };
+  next.confirmedFields = next.confirmedFields.filter(field => field !== key);
+  next.revision += 1; next.updatedAt = timestamp();
+  return next;
 }
 
 function createClause(input = {}) {
@@ -48,7 +64,17 @@ function validateBusiness(business, documents = business.selectedDocuments) {
   if (documents.includes('invoice')) { required.add('invoiceNumber'); required.add('invoiceDate'); }
   for (const field of required) {
     if (!meaningful(business.fields[field])) issues.push({ code: 'MISSING_FIELD', path: `fields.${field}`, message: `请补充 ${field}` });
-    else if (!business.confirmedFields.includes(field)) issues.push({ code: 'UNCONFIRMED_FIELD', path: `fields.${field}`, message: `请核对 ${field}` });
+  }
+  for (const [field, value] of Object.entries(business.fields)) {
+    if (meaningful(value) && scopeForField(business, field).some(doc => documents.includes(doc)) && !business.confirmedFields.includes(field)) {
+      issues.push({ code: 'UNCONFIRMED_FIELD', path: `fields.${field}`, message: `请核对 ${field}` });
+    }
+  }
+  for (const doc of documents) {
+    const requiredForDoc = doc === 'invoice' ? ['seller', 'buyer', 'invoiceNumber', 'invoiceDate'] : ['seller', 'buyer'];
+    for (const field of requiredForDoc) {
+      if (!scopeForField(business, field).includes(doc)) issues.push({ code: 'MISSING_FIELD_SCOPE', path: `fieldScopes.${field}`, document: doc, message: `${doc === 'invoice' ? '发票' : '装箱单'}必须包含${field}` });
+    }
   }
   for (const clause of business.clauses) {
     const path = `clauses.${clause.id}`;
@@ -64,7 +90,8 @@ function validateBusiness(business, documents = business.selectedDocuments) {
 function projectDocument(business, documentType) {
   if (!DOCUMENT_TYPES.includes(documentType)) throw new Error('未知单据类型');
   const applicable = business.clauses.filter(clause => clause.scope.includes(documentType));
-  return copy({ documentType, fields: business.fields,
+  const fields = Object.fromEntries(Object.entries(business.fields).map(([key, value]) => [key, scopeForField(business, key).includes(documentType) ? value : '']));
+  return copy({ documentType, fields,
     printedClauses: applicable.filter(clause => clause.type !== 'operation'),
     checklist: applicable.filter(clause => clause.type === 'operation') });
 }
@@ -102,6 +129,7 @@ function duplicateBusiness(business) {
   const next = createBusiness(`${business.name}（副本）`);
   next.fields.seller = business.fields.seller;
   next.fields.buyer = business.fields.buyer;
+  next.fieldScopes = copy(business.fieldScopes ?? next.fieldScopes);
   next.clauses = business.clauses.map(clause => createClause({ ...clause, value: '', confirmed: false, source: { kind: 'copied', businessId: business.id } }));
   return next;
 }
@@ -110,7 +138,9 @@ function createGenerationSnapshot(business, template, documents = business.selec
   const issues = validateBusiness(business, documents);
   if (issues.length) throw new Error(`存在 ${issues.length} 项未完成检查`);
   return copy({ id: randomUUID(), generatedAt: timestamp(), businessId: business.id,
-    businessRevision: business.revision, template, documents: documents.map(doc => projectDocument(business, doc)) });
+    businessRevision: business.revision, template,
+    references: { lcNumber: business.fields.lcNumber, invoiceNumber: business.fields.invoiceNumber },
+    documents: documents.map(doc => projectDocument(business, doc)) });
 }
 
-module.exports = { DOCUMENT_TYPES, CLAUSE_TYPES, createBusiness, updateField, createClause, validateBusiness, projectDocument, createTemplate, applyTemplate, duplicateBusiness, createGenerationSnapshot };
+module.exports = { DOCUMENT_TYPES, CLAUSE_TYPES, createBusiness, updateField, scopeForField, updateFieldScope, createClause, validateBusiness, projectDocument, createTemplate, applyTemplate, duplicateBusiness, createGenerationSnapshot };

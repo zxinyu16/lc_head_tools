@@ -132,24 +132,44 @@ test('重复、超限或类型不符的文件不会重复进入业务', () => {
   assert.match(env.toasts.at(-1), /20 MB 内的 PDF 或图片/);
 });
 
-test('两种入口分别进入手填和信用证文本，文本文件只形成待核对候选', () => {
+test('先手填再导入信用证文本，文件自动形成待核对候选', () => {
   const { env, store, pages } = createEnv();
   const home = pages.home();
-  home.createManual();
-  assert.equal(env.navigated.at(-1), '/pages/editor/index?step=1');
-  home.createFromLc();
+  home.create();
   assert.equal(env.navigated.at(-1), '/pages/editor/index?step=0');
   const editor = pages.editor();
   editor.onLoad({ step: '0' }); editor.onShow();
+  editor.fieldInput({ currentTarget: { dataset: { key: 'seller' } }, detail: { value: '已知出口商' } });
+  editor.stepTo({ currentTarget: { dataset: { step: 1 } } });
   const text = ':20:LC-TXT-001\n:46A:PROFORMA INVOICE NO. PI-TXT-1';
   env.chosenFile = { path: '/tmp/credit.txt', size: text.length, name: 'credit.txt' };
   env.readFiles.set('/tmp/credit.txt', text);
   editor.importLcText();
   assert.equal(editor.data.lcInput, text);
   assert.equal(editor.data.lcTextName, 'credit.txt');
-  editor.parseLc();
   assert.equal(editor.data.lcCandidates.fields[0].value, 'LC-TXT-001');
+  assert.equal(store.active().fields.seller, '已知出口商');
   assert.equal(store.active().fields.lcNumber, '');
+});
+
+test('一键生成两份单据，结果按信用证号和发票号对应并可保存', () => {
+  const { env, store, pages } = createEnv();
+  pages.home().create();
+  const editor = pages.editor(); editor.onLoad({}); editor.onShow();
+  fillAndConfirm(editor, VALID_FIELDS);
+  editor.fieldScope({ currentTarget: { dataset: { key: 'lcNumber' } }, detail: { value: '1' } });
+  editor.confirmField({ currentTarget: { dataset: { key: 'lcNumber' } }, detail: { value: true } });
+  const preview = pages.preview(); preview.onShow();
+  preview.toggleDoc({ currentTarget: { dataset: { doc: 'packingList' } }, detail: { value: true } });
+  assert.equal(preview.data.issues.length, 0);
+  preview.generate();
+  assert.equal(store.read().generations.length, 2);
+  assert.equal(preview.data.latestOutputs.length, 2);
+  assert.ok(preview.data.latestOutputs.every(x => x.lcNumber === 'LC-001' && x.invoiceNumber === 'INV-001'));
+  const packing = store.read().generations.find(x => x.snapshot.documents[0].documentType === 'packingList');
+  assert.equal(packing.snapshot.documents[0].fields.lcNumber, '');
+  preview.saveOutput({ currentTarget: { dataset: { path: packing.path } } });
+  assert.equal(env.shared.at(-1), packing.path);
 });
 
 test('本地保存失败时页面保留当前输入并提示失败', () => {

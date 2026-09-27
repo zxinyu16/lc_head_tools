@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBusiness, createClause, validateBusiness, updateField, projectDocument, createTemplate, applyTemplate, duplicateBusiness, createGenerationSnapshot } from '../src/domain/documents.mjs';
+import { createBusiness, createClause, validateBusiness, updateField, updateFieldScope, projectDocument, createTemplate, applyTemplate, duplicateBusiness, createGenerationSnapshot } from '../src/domain/documents.mjs';
 function ready() { const b=createBusiness('出口业务');b.fields={lcNumber:'',seller:'SELLER',buyer:'BUYER',invoiceNumber:'INV-001',invoiceDate:'2026-09-26'};b.confirmedFields=['seller','buyer','invoiceNumber','invoiceDate'];return b; }
 test('无信用证也可完成手动制单',()=>assert.deepEqual(validateBusiness(ready()),[]));
 test('发票专属缺失编号不阻止装箱单',()=>{const b=ready();b.clauses.push(createClause({name:'保单编号',scope:['invoice'],confirmed:true}));assert.equal(validateBusiness(b,['packingList']).length,0);assert.equal(validateBusiness(b,['invoice'])[0].code,'MISSING_CLAUSE_VALUE');});
@@ -14,3 +14,6 @@ test('业务复制清空编号并保留待确认交易方',()=>{const b=ready();
 test('生成快照不随源业务和模板修改',()=>{const b=ready(),t=createTemplate(b,'标准');const s=createGenerationSnapshot(b,t);b.fields.seller='CHANGED';t.name='CHANGED';assert.equal(s.documents[0].fields.seller,'SELLER');assert.equal(s.template.name,'标准');});
 test('未确认信息阻止快照生成',()=>{const b=ready();b.confirmedFields=[];assert.throws(()=>createGenerationSnapshot(b,createTemplate(b,'标准')),/未完成检查/);});
 test('空适用范围和未知单据不能静默忽略',()=>{const b=ready();b.clauses.push(createClause({name:'PI',scope:[]}));assert.equal(validateBusiness(b)[0].code,'UNKNOWN_SCOPE');assert.throws(()=>projectDocument(b,'unknown'));});
+test('逐项选择保留单据并阻止排除必需表头字段',()=>{let b=updateFieldScope(ready(),'lcNumber',['invoice']);b.fields.lcNumber='LC-001';assert.equal(projectDocument(b,'invoice').fields.lcNumber,'LC-001');assert.equal(projectDocument(b,'packingList').fields.lcNumber,'');b=updateFieldScope(b,'seller',['invoice']);assert.ok(validateBusiness(b,['packingList']).some(x=>x.code==='MISSING_FIELD_SCOPE'));assert.equal(projectDocument(b,'packingList').fields.seller,'');});
+test('旧业务缺少字段范围时仍按两种单据输出',()=>{const b=ready();delete b.fieldScopes;assert.equal(projectDocument(b,'packingList').fields.seller,'SELLER');assert.equal(validateBusiness(b,['packingList']).length,0);});
+test('填写的可选信用证号若要输出也必须核对',()=>{const b=ready();b.fields.lcNumber='LC-001';assert.ok(validateBusiness(b,['invoice']).some(x=>x.code==='UNCONFIRMED_FIELD'&&x.path==='fields.lcNumber'));b.fieldScopes.lcNumber=[];assert.equal(validateBusiness(b,['invoice']).length,0);});
