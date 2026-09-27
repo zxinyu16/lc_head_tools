@@ -101,6 +101,7 @@ test('小程序页面完成本地制单、模板保存及 Word 历史打开', ()
   const preview = pages.preview();
   preview.onShow();
   assert.equal(preview.data.issues.length, 0);
+  assert.equal(preview.data.latestOutput, null);
   assert.equal(preview.data.document.printedClauses.length, 2);
   preview.generate();
   const written = env.written.at(-1);
@@ -109,6 +110,9 @@ test('小程序页面完成本地制单、模板保存及 Word 历史打开', ()
   assert.equal(store.read().generations.length, 1);
   assert.equal(preview.data.history.length, 1);
   assert.equal(preview.data.history[0].stale, false);
+  assert.equal(preview.data.latestOutput.docName, '发票');
+  assert.equal(preview.data.latestOutput.path, written.filePath);
+  assert.equal(preview.data.olderOutputs.length, 0);
   preview.openHistory({ currentTarget: { dataset: { path: written.filePath } } });
   assert.equal(env.opened.length, 2);
 });
@@ -176,6 +180,7 @@ test('生成后修改业务，历史记录标记为旧版本数据', () => {
   preview.refresh();
   assert.equal(preview.data.history.length, 1);
   assert.equal(preview.data.history[0].stale, true);
+  assert.equal(preview.data.latestOutput.stale, true);
 });
 
 test('模板字段冲突时不覆盖业务并弹出核对提示', () => {

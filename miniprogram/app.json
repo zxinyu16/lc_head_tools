@@ -1,7 +1,7 @@
 {
   "pages": ["pages/home/index", "pages/editor/index", "pages/templates/index", "pages/preview/index"],
   "window": { "navigationBarTitleText": "单证之间", "navigationBarBackgroundColor": "#f4f3ee", "navigationBarTextStyle": "black", "backgroundColor": "#f4f3ee" },
-  "tabBar": { "custom": true, "color": "#737c75", "selectedColor": "#176b52", "backgroundColor": "#ffffff", "list": [ { "pagePath": "pages/home/index", "text": "业务" }, { "pagePath": "pages/templates/index", "text": "模板" }, { "pagePath": "pages/preview/index", "text": "预览" } ] },
+  "tabBar": { "custom": true, "color": "#737c75", "selectedColor": "#176b52", "backgroundColor": "#ffffff", "list": [ { "pagePath": "pages/home/index", "text": "业务" }, { "pagePath": "pages/templates/index", "text": "模板" }, { "pagePath": "pages/preview/index", "text": "结果" } ] },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
   "lazyCodeLoading": "requiredComponents"
